@@ -268,3 +268,34 @@ goldbachList' a b m = map (\(Just x) -> x) $ has_goldbach
 
 goldbachList'' :: Int -> Int -> Int -> [(Int, Int)]
 goldbachList'' a b m = filter (\(x,y) -> m <= min x y) $ goldbachList a b
+
+-- 46
+and' :: Bool -> Bool -> Bool
+and' True True = True
+and' _ _ = False
+
+or' :: Bool -> Bool -> Bool
+or' False False = False
+or' _ _ = True
+
+nand' :: Bool -> Bool -> Bool
+nand' a b = not $ and' a b
+
+nor' :: Bool -> Bool -> Bool
+nor' a b = not $ or' a b
+
+xor' :: Bool -> Bool -> Bool
+xor' True False = True
+xor' False True = True
+xor' _ _ = False
+
+impl' :: Bool -> Bool -> Bool
+impl' True False = False
+impl' _ _ = True
+
+equ' :: Bool -> Bool -> Bool
+equ' a b = not $ xor' a b
+
+table :: (Bool -> Bool -> Bool) -> IO ()
+table pred = mapM_ putStrLn [concat [show a, "\t", show b, "\t", show $ pred a b] | a <- tf, b <- tf]
+    where tf = [True, False]
