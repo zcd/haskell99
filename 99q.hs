@@ -299,3 +299,30 @@ equ' a b = not $ xor' a b
 table :: (Bool -> Bool -> Bool) -> IO ()
 table pred = mapM_ putStrLn [concat [show a, "\t", show b, "\t", show $ pred a b] | a <- tf, b <- tf]
     where tf = [True, False]
+
+-- 47
+-- did not understand this problem, taken from solution to proceed
+infixl 4 `or'`
+infixl 6 `and'`
+
+-- 48
+tablen :: Int -> ([Bool] -> Bool) -> IO ()
+tablen n pred = mapM_ putStrLn tableLines
+    where
+        tableLines = map (concat . cells) $ bools n
+        cells xs = [L.intercalate "\t" $ map show xs, "\t", (show . pred) xs]
+        bools k
+            | k == 1 = [[True], [False]]
+            | otherwise = concat [map ([True]++) next, map ([False]++) next]
+            where next = bools (k-1)
+
+-- 49
+gray :: Int -> [String]
+gray n
+    | n == 1 = ["0", "1"]
+    | otherwise = concat [map (++"0") $ reverse next, map (++"1") next]
+    where next = gray (n-1)
+
+-- 50
+huffman :: [(Char, Int)] -> [(Char, Int)]
+huffman xs = xs
