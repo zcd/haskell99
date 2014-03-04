@@ -1,6 +1,7 @@
 import qualified Data.List as L
 import qualified System.Random as R
 import Data.Function
+import Data.Maybe
 
 -- 1
 myLast :: [a] -> a
@@ -201,6 +202,7 @@ lfsort xs =
 
 -- 31
 isPrime :: Int -> Bool
+isPrime 1 = False
 isPrime n = and $ tail $ map ((/=0) . rem n) $ range 1 $ round $ sqrt $ fromIntegral n
 
 -- 32
@@ -212,5 +214,57 @@ myGcd a b = myGcd b $ mod a b
 coprime :: Int -> Int -> Bool
 coprime a b = 1 == myGcd a b
 
+-- 34
 totient :: Int -> Int
 totient n = length $ filter (coprime n) $ range 1 n
+
+-- 35
+primeFactors :: Int -> [Int]
+primeFactors n = primeEnum primes n
+    where
+        primes = filter isPrime $ range 2 n
+        primeEnum [] k = []
+        primeEnum _ 1 = []
+        primeEnum ps'@(p:ps) k
+            | k `rem` p == 0 = p : primeEnum ps' (k `div` p)
+            | otherwise = primeEnum ps k
+
+-- 36
+prime_factors_mult :: Int -> [(Int, Int)]
+prime_factors_mult n = map (\xs@(x:_) -> (x, length xs)) $ L.group $ primeFactors n
+
+-- 37
+phi :: Int -> Int
+phi n = foldl (*) 1 $ map (\(p, m) -> (p-1) * p^(m-1)) $ prime_factors_mult n
+
+-- 39
+primesR :: Int -> Int -> [Int]
+primesR a b = filter (isPrime) $ range a b
+
+-- 40
+goldbach :: Int -> (Int, Int)
+goldbach n = goldbach_test (primesR 2 n)  n
+    where
+        goldbach_test (x:xs) n
+            | n <= x = goldbach_test xs n
+            | isPrime (n-x) = (x, n-x)
+            | otherwise = goldbach_test xs n
+
+-- 41
+goldbachList :: Int -> Int -> [(Int, Int)]
+goldbachList a b = map goldbach $ filter even $ range (max 4 a) b
+
+goldbachList' :: Int -> Int -> Int -> [(Int, Int)]
+goldbachList' a b m = map (\(Just x) -> x) $ has_goldbach
+    where
+        validRange = filter even $ range (max 4 a) b
+        goldbacher = goldbach_test $ primesR m b
+        has_goldbach = filter isJust $ map goldbacher validRange 
+        goldbach_test (x:xs) n
+            | null xs = Nothing
+            | n <= x || (n-x) <= m = goldbach_test xs n
+            | isPrime (n-x) = Just (x, n-x)
+            | otherwise = goldbach_test xs n
+
+goldbachList'' :: Int -> Int -> Int -> [(Int, Int)]
+goldbachList'' a b m = filter (\(x,y) -> m <= min x y) $ goldbachList a b
