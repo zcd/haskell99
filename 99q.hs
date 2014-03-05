@@ -62,20 +62,20 @@ encode :: (Eq a) => [a] -> [(Int, a)]
 encode = (map (\xs@(x:_) -> (length xs, x))) . pack
 
 -- 11
-data Run a = Multiple Int a | Single a deriving (Show)
+data Run a = Mulappendle Int a | Single a deriving (Show)
 
 encodeModified :: (Eq a) => [a] -> [Run a]
 encodeModified = (map encoder) . pack
     where encoder (x:xs)
             | null xs = Single x
-            | otherwise = Multiple (1+length xs) x
+            | otherwise = Mulappendle (1+length xs) x
 
 -- 12
 decodeModified :: [Run a] -> [a]
 decodeModified [Single x] = [x]
 decodeModified (Single x : zs) = x : decodeModified zs
-decodeModified (Multiple c x : zs)
-    | c > 2 = x : decodeModified (Multiple (c-1) x : zs)
+decodeModified (Mulappendle c x : zs)
+    | c > 2 = x : decodeModified (Mulappendle (c-1) x : zs)
     | otherwise = x : decodeModified (Single x : zs)
 
 -- 13
@@ -83,10 +83,10 @@ encodeDirect :: (Eq a) => [a] -> [Run a]
 encodeDirect = foldr encoder []
     where encoder x [] = [Single x]
           encoder x zs'@(Single y : zs)
-            | x == y = Multiple 2 y : zs
+            | x == y = Mulappendle 2 y : zs
             | otherwise = Single x : zs'
-          encoder x zs'@(Multiple c y : zs)
-            | x == y = Multiple (c+1) y : zs
+          encoder x zs'@(Mulappendle c y : zs)
+            | x == y = Mulappendle (c+1) y : zs
             | otherwise = Single x : zs'
 
 -- 14
@@ -324,5 +324,43 @@ gray n
     where next = gray (n-1)
 
 -- 50
-huffman :: [(Char, Int)] -> [(Char, Int)]
-huffman xs = xs
+data Huff a = Leaf a | Node (Huff a) (Huff a) deriving (Show)
+sortSnd = L.sortBy (compare `on` snd)
+
+readHuff :: String -> Huff a -> [(a, String)]
+readHuff p (Leaf l) = [(l, p)]
+readHuff p (Node left right) = (readHuff (p++"0") left) ++ (readHuff (p++"1") right)
+
+-- less efficient version cause I don't know how to use priority queue in Haskell
+genHuffman :: [(Huff a, Int)] -> [(a, String)]
+huffman :: [(Char, Int)] -> [(Char, String)]
+
+genHuffman [(t,w)] = readHuff "" t
+genHuffman ((t1,w1):(t2,w2):qs) = genHuffman $ sortSnd $ (Node t1 t2,w1+w2):qs
+
+huffman xs = genHuffman (map (\(c,w) -> (Leaf c,w)) $ sortSnd xs)
+
+-- more efficient but messier
+genHuffman' :: [(Huff a, Int)] -> [(Huff a, Int)] -> [(a, String)]
+huffman' :: [(Char, Int)] -> [(Char, String)]
+
+genHuffman' [] [(t,_)] = readHuff "" t
+genHuffman' [(t,_)] [] = readHuff "" t
+genHuffman' [(tl,_)] [(tr,_)] = readHuff "" (Node tl tr)
+genHuffman' ((t1,w1):(t2,w2):ql) [] = genHuffman' ql [append]
+    where append = (Node t1 t2, w1+w2)
+genHuffman' [] ((t1,w1):(t2,w2):qr) = genHuffman' [] $ qr ++ [append]
+    where append = (Node t1 t2, w1+w2)
+genHuffman' l@(l1:l2:ql) r@(r1:r2:qr)
+    | wl2 < wr1 = genHuffman' ql (r ++ [(Node tl1 tl2, wl1+wl2)])
+    | wr2 < wl1 = genHuffman' l (qr ++ [(Node tr1 tr2, wr1+wr2)])
+    | otherwise = genHuffman' (l2:ql) ((r2:qr) ++ [(Node tl1 tr1, wl1+wr1)])
+        where
+            (tl1,wl1) = l1
+            (tl2,wl2) = l2
+            (tr1,wr1) = r1
+            (tr2,wr2) = r2
+
+huffman' xs = genHuffman' (map (\(c,w) -> (Leaf c,w)) $ sortSnd xs) []
+
+foo = [('a',45),('b',13),('c',12),('d',16),('e',9),('f',5)]
