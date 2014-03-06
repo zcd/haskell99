@@ -305,16 +305,18 @@ table pred = mapM_ putStrLn [concat [show a, "\t", show b, "\t", show $ pred a b
 infixl 4 `or'`
 infixl 6 `and'`
 
+bools :: Int -> [[Bool]]
+bools k
+    | k == 1 = [[True], [False]]
+    | otherwise = concat [map ([True]++) next, map ([False]++) next]
+    where next = bools (k-1)
+
 -- 48
 tablen :: Int -> ([Bool] -> Bool) -> IO ()
 tablen n pred = mapM_ putStrLn tableLines
     where
         tableLines = map (concat . cells) $ bools n
         cells xs = [L.intercalate "\t" $ map show xs, "\t", (show . pred) xs]
-        bools k
-            | k == 1 = [[True], [False]]
-            | otherwise = concat [map ([True]++) next, map ([False]++) next]
-            where next = bools (k-1)
 
 -- 49
 gray :: Int -> [String]
@@ -355,12 +357,149 @@ genHuffman' l@(l1:l2:ql) r@(r1:r2:qr)
     | wl2 < wr1 = genHuffman' ql (r ++ [(Node tl1 tl2, wl1+wl2)])
     | wr2 < wl1 = genHuffman' l (qr ++ [(Node tr1 tr2, wr1+wr2)])
     | otherwise = genHuffman' (l2:ql) ((r2:qr) ++ [(Node tl1 tr1, wl1+wr1)])
-        where
-            (tl1,wl1) = l1
-            (tl2,wl2) = l2
-            (tr1,wr1) = r1
-            (tr2,wr2) = r2
+    where
+        (tl1,wl1) = l1
+        (tl2,wl2) = l2
+        (tr1,wr1) = r1
+        (tr2,wr2) = r2
 
 huffman' xs = genHuffman' (map (\(c,w) -> (Leaf c,w)) $ sortSnd xs) []
 
-foo = [('a',45),('b',13),('c',12),('d',16),('e',9),('f',5)]
+-- 55
+data Tree a = Empty | Branch a (Tree a) (Tree a) deriving Show
+leaf x = Branch x Empty Empty
+
+isBalancedTree :: Tree a -> Bool
+isBalancedTree Empty = True
+isBalancedTree (Branch _ left right) = (abs $ (children left) - (children right)) <= 1
+    where
+        children Empty = 1
+        children (Branch _ left right) = children left + children right
+
+t1 = Branch 'x' (Branch 'x' Empty Empty) (Branch 'x' Empty (Branch 'x' Empty Empty))
+t2 = Branch 'x' (Branch 'x' Empty Empty) (Branch 'x' (Branch 'x' Empty Empty) Empty)
+t3 = Branch 'x' (Branch 'x' Empty (Branch 'x' Empty Empty)) (Branch 'x' Empty Empty)
+t4 = Branch 'x' (Branch 'x' (Branch 'x' Empty Empty) Empty) (Branch 'x' Empty Empty)
+t5 = Branch 'x' (Branch 'x' (Branch 'x' Empty Empty) Empty) Empty
+
+cbalTree :: Int -> [Tree Char]
+cbalTree n
+    | n < 1 = [Empty]
+    | n == 1 = [leaf 'x']
+    | fl == cl = [Branch 'x' l r | l <- t1, r <- t2]
+    | otherwise = map (\(l, r) -> Branch 'x' l r) subTrees
+    where
+        fl = (n-1) `div` 2
+        cl = n - fl - 1
+        t1 = cbalTree fl
+        t2 = cbalTree cl
+        subTrees = [p | l <- t1, r <- t2, p <- [(l, r), (r, l)]]
+
+-- 56
+mirror :: Tree a -> Tree b -> Bool
+mirror Empty Empty = True
+mirror (Branch _ l1 r1) (Branch _ l2 r2) = mirror l1 r2 && mirror l2 r1
+mirror _ _ = False
+
+symmetric :: Tree a -> Bool
+symmetric Empty = True
+symmetric t = mirror t t
+
+-- 57
+add :: Tree Int -> Int -> Tree Int
+add Empty x = Branch x Empty Empty
+add t@(Branch v l r) x
+    | x < v = Branch v (add l x) r
+    | x > v = Branch v l (add r x)
+    | otherwise = t
+
+construct :: [Int] -> Tree Int
+construct = foldl add Empty
+
+-- 58
+symCbalTrees :: Int -> [Tree Char]
+symCbalTrees n
+    | even n = []
+    | otherwise = filter symmetric $ cbalTree n
+
+-- 59
+isHgtBalanced :: Tree a -> Bool
+isHgtBalanced Empty = True
+isHgtBalanced (Branch _ left right) = (abs $ maxHgt left - maxHgt right) <= 1
+    where
+        maxHgt Empty = 0
+        maxHgt (Branch _ left right) = max (1+maxHgt left) (1+maxHgt right)
+
+hbalTree :: a -> Int -> [Tree a]
+hbalTree x 0 = [Empty]
+hbalTree x 1 = [leaf x]
+hbalTree x h = map (\(l, r) -> Branch x l r) subTrees
+    where
+        s1 = hbalTree x $ h-1
+        s1' = hbalTree x $ h-1
+        s2 = hbalTree x $ h-2
+        subTrees = [p | a <- s1, b <- s2, p <- [(a, b), (b, a)]] ++ [(a, b) | a <- s1', b <- s1]
+
+-- 60
+-- upper bound from http://www.cs.umd.edu/~meesh/351/mount/lectures/extra-AVL.pdf
+nodeCount :: Tree a -> Int
+nodeCount Empty = 0
+nodeCount (Branch _ l r) = 1 + nodeCount l + nodeCount r
+
+hbalTreeNodes :: a -> Int -> [Tree a]
+hbalTreeNodes x n = filter (\t -> nodeCount t == n) $ concat $ map (hbalTree x) $ [minHgt..maxHgt]
+    where
+        minHgt = ceiling $ logBase 2 $ fromIntegral n+1
+        maxHgt = length (takeWhile (<n) fibs) -3
+            where
+                fibs = 0 : 1 : zipWith (+) fibs (tail fibs)
+
+-- 61
+tree4 = Branch 1 (Branch 2 Empty (Branch 4 Empty Empty)) (Branch 2 Empty Empty)
+
+countLeaves :: Tree a -> Int
+countLeaves Empty = 0
+countLeaves (Branch _ Empty Empty) = 1
+countLeaves (Branch _ l r) = countLeaves l + countLeaves r
+
+-- 61a
+leaves :: Tree a -> [a]
+leaves Empty = []
+leaves (Branch x Empty Empty) = [x]
+leaves (Branch _ l r) = leaves l ++ leaves r
+
+-- 62
+internals :: Tree a -> [a]
+internals Empty = []
+internals (Branch _ Empty Empty) = []
+internals (Branch x l r) = x:internals l ++ internals r
+
+-- 62b
+atLevel :: Tree a -> Int -> [a]
+atLevel Empty _ = []
+atLevel (Branch x _ _) 1 = [x]
+atLevel (Branch _ l r) h = atLevel l (h-1) ++ atLevel r (h-1)
+
+-- 63
+completeBinaryTree :: Int -> Tree Char
+completeBinaryTree 0 = Empty
+completeBinaryTree 1 = leaf 'x'
+completeBinaryTree n = tree 1
+    where
+        tree m
+            | n < m = Empty
+            | otherwise = Branch 'x' (tree $ 2*m) (tree $ 2*m+1)
+
+isCompleteBinaryTree :: Tree a -> Bool
+isCompleteBinaryTree Empty = True
+isCompleteBinaryTree t = (fst $ completeHgt t) >= 0
+    where
+        completeHgt Empty = (0, True)
+        completeHgt (Branch _ l' r')
+            | rFull && lHgt == rHgt + 1 = (1 + lHgt, False)
+            | lFull && lHgt == rHgt = (1 + lHgt, rFull)
+            | otherwise = (-1, False)
+            where
+                (lHgt, lFull) = completeHgt l'
+                (rHgt, rFull) = completeHgt r'
+
